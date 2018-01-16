@@ -1,0 +1,20 @@
+current state: can create pool, then create job, then pass tasks to job (see batch_job_something.sh). the image we create the instances from currently has nothing installed on it, will have to make a new instance with proper things installed.
+
+next steps: create a vm. install anaconda on the vm. within anaconda environment, install something like numpy. write a script that starts the environment, then starts a python script which uses numpy to generate a file saved to the disk. move the file over to the head node. then make the home chmod -R 777, then deprovision the vm (keeping the user home dir). then try calling the script as a task, when the vms in a pool are created from that image. 
+motivation: need to check that software installed in the home directory still works when called via a task.
+
+
+something else to try: deprovisioning a vm, then creating an instance from it that we can login to. 
+
+
+
+to make image: 
+
+
+create vm, 16 core f16
+put public key on vm
+make home directory read and writable for everyone
+deprovision
+
+
+

@@ -1,0 +1,21 @@
+{
+    "job": {
+        "id": "my-first-job-scp",
+        "poolInfo": {
+            "poolId": "HelloWorldFromImage2"
+        },
+        "taskFactory": {
+	    "type": "parametricSweep",
+	    "parameterSets": [
+		{
+		    "start": 1,
+		    "end": 5,
+		    "step": 1
+		}
+	    ],
+	    "repeatTask": {
+		"commandLine": "touch tmp_{0}.txt; scp -i /home/jessedd/jesse-key-pair-uswest2.pem ~/tmp_{0}.txt jessedd@52.226.35.34:/home/jessedd/azure/results/"
+	    }
+        }
+    }
+}
