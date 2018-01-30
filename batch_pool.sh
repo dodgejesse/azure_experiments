@@ -1,39 +1,53 @@
 #!/bin/bash
 
+NUMRESTARTS=10
+POOLID="DebugAutoscalePool5"
+JOBID="DebugAutoscaleJob5"
+TASKID="DebugAutoscaleTask5"
+WAIT_SECONDS=5
 
-# create azure storage, probably blob storage
-
-# get shared access signature SAS
-
-##### current solution: put key on image, ssh stuff. 
+# https://docs.microsoft.com/en-us/cli/azure/batch/pool?view=azure-cli-latest#az_batch_pool_create
 
 az batch pool create \
-   --id HelloWorldFromImage2 \
-   --target-dedicated 3 \
+   --id ${POOLID} \
    --vm-size "Standard_F4" \
-   --start-task-command-line "echo hi" \
-   --start-task-wait-for-success \
-   --image '/subscriptions/8557c4b8-f939-4cca-80f5-d17b546717af/resourceGroups/Jesse/providers/Microsoft.Compute/images/vmForBatch3-image-20180114151452' \
-   --node-agent-sku-id "batch.node.ubuntu 16.04"
+   --image '/subscriptions/8557c4b8-f939-4cca-80f5-d17b546717af/resourceGroups/Jesse/providers/Microsoft.Compute/images/vmFromImage-image' \
+   --node-agent-sku-id "batch.node.ubuntu 16.04" \
+   --target-low-priority-nodes ${NUMRESTARTS} \
+
+#
+#   --start-task-command-line "echo hi" \
+#   --start-task-wait-for-success \
+
+   
+
+
+az batch job create --id ${JOBID} --pool-id ${POOLID}
+
+for i in `seq 1 ${NUMRESTARTS}`; do
+    az batch task create --job-id ${JOBID} --task-id ${TASKID}_${i} --command-line "/bin/bash -c 'source /home/jessedd/software/anaconda2/bin/activate hparamopt; cd /home/jessedd/projects/dan; git fetch --all; git reset --hard origin/master; python dan_sentiment.py > /home/jessedd/output_${i}.txt; scp -o StrictHostKeyChecking=no -i /home/jessedd/jesse-key-pair-uswest2.pem /home/jessedd/output_${i}.txt jessedd@52.226.68.175:/home/jessedd/azure_experiments/results/output_0${i}.txt'"
+done
+
+
+while true; do
+    POOL_STATUS=`az batch pool show --pool-id ${POOLID} | grep allocationState\" | awk '{print $2}' | sed s/,// | sed s/\"// | sed s/\"//`
+    echo ${POOL_STATUS}
+    if [ "${POOL_STATUS}" == "steady" ]; then
+	echo "the pool is max size, about to set resize"
+	break
+    else
+	echo "waiting ${WAIT_SECONDS} seconds for pool to finish resizing"
+	sleep ${WAIT_SECONDS}
+    fi
+done
+
+
+
+# evaluation interval has to be parsable by https://github.com/gweis/isodate/blob/master/src/isodate/isoduration.py, with minimum time as 5 min.
+az batch pool autoscale enable \
+   --pool-id ${POOLID} \
+   --auto-scale-evaluation-interval 'P00Y00M00DT00H05M00S' \
+   --auto-scale-formula '$averageActiveTaskCount = avg($ActiveTasks.GetSample(TimeInterval_Minute * 1));$TargetLowPriorityNodes = min(${NUMRESTARTS}, $averageActiveTaskCount);'
 
 
 exit
-
-# potential next steps:
-# make a job factory, which submits different jobs to each node
-# make a vm, which i can update, which i can also use to create images
-
-
-
-# Let's change the pool to enable automatic scaling of compute nodes.
-# This autoscale formula specifies that the number of nodes should be adjusted according
-# to the number of active tasks, up to a maximum of 10 compute nodes.
-az batch pool autoscale enable \
-   --pool-id mypool-windows \
-   --auto-scale-formula "$averageActiveTaskCount = avg($ActiveTasks.GetSample(TimeInterval_Minute * 15));$TargetDedicated = min(10, $averageActiveTaskCount);"
-
-# We can monitor the resizing of the pool.
-az batch pool show --pool-id mypool-windows
-
-# Once we no longer require the pool to automatically scale, we can disable it.
-az batch pool autoscale disable --pool-id mypool-windows
