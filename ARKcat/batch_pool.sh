@@ -1,20 +1,20 @@
 #!/bin/bash
 
-PROJECT_NAME="ARKcatDebug"
-EXPERIMENT_NUM=4
+# job specifications
+SRCH_TPE="bayes_opt"
+ITERS=2
+BATCH_SIZE=1
+SPACE="dropl2learn_bad_lr"
+
+
+PROJECT_NAME="${SRCH_TPE}__${SPACE}"
+EXPERIMENT_NUM=1
 
 NUMRESTARTS=3
 POOLID="${PROJECT_NAME}Pool${EXPERIMENT_NUM}"
 JOBID="${PROJECT_NAME}Job${EXPERIMENT_NUM}"
 TASKID="${PROJECT_NAME}Task${EXPERIMENT_NUM}"
 WAIT_SECONDS=5
-
-
-# job specifications
-SRCH_TPE="spearmint"
-ITERS=5
-BATCH_SIZE=2
-SPACE=arch
 
 
 # docs: https://docs.microsoft.com/en-us/cli/azure/batch/pool?view=azure-cli-latest#az_batch_pool_create
@@ -86,6 +86,7 @@ while true; do
 	echo "all jobs finished. now deleting job and pool."
 	az batch job delete --job-id ${JOBID} --yes
 	az batch pool delete --pool-id ${POOLID} --yes
+	break
     else
 	echo "job statistics:"
 	echo "completed: ${NUM_COMPLETE_JOBS}, failed: ${NUM_FAILED_JOBS}, active: ${NUM_ACTIVE_JOBS}, running: ${NUM_RUNNING_JOBS}, total jobs: ${NUMRESTARTS}"
