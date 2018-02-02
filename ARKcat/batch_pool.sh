@@ -86,22 +86,3 @@ done
 
 
 
-
-
-#while true; do
-#    POOL_STATUS=`az batch pool show --pool-id ${POOLID} | grep allocationState\" | awk '{print $2}' | sed s/,// | sed s/\"// | sed s/\"//`
-#    echo "current status of allocationState: ${POOL_STATUS}"
-#    if [ "${POOL_STATUS}" == "steady" ]; then
-#	echo "the pool is now steady (not resizing), about to set autoscale"
-#	break
-#    else
-#	echo "waiting ${WAIT_SECONDS} seconds for pool to finish resizing"
-#	sleep ${WAIT_SECONDS}
-#    fi
-#done
-
-# evaluation interval has to be parsable by https://github.com/gweis/isodate/blob/master/src/isodate/isoduration.py, with minimum time as 5 min.
-#az batch pool autoscale enable \
-#   --pool-id ${POOLID} \
-#   --auto-scale-evaluation-interval 'P00Y00M00DT00H05M00S' \
-#   --auto-scale-formula '$averageActiveTaskCount = avg($ActiveTasks.GetSample(TimeInterval_Minute * 1));$TargetLowPriorityNodes = min(${NUMRESTARTS}, $averageActiveTaskCount);'
