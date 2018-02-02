@@ -1,26 +1,34 @@
-#!/bin/bash
+if [ "$STY" = "" ]
+then
+    echo "not in screen! please start a screen session to run this script"
+    exit 1
+fi
+
 
 # job specifications
-SRCH_TPE="bayes_opt"
-ITERS=2
+#"bayes_opt"
+SRCH_TPE="mixed_dpp_rbf"
+ITERS=20
 BATCH_SIZE=1
-SPACE="dropl2learn_bad_lr"
+SPACE="bigcube"
 
 
 PROJECT_NAME="${SRCH_TPE}__${SPACE}"
-EXPERIMENT_NUM=1
+EXPERIMENT_NUM=3
 
-NUMRESTARTS=3
+NUMRESTARTS=25
 POOLID="${PROJECT_NAME}Pool${EXPERIMENT_NUM}"
 JOBID="${PROJECT_NAME}Job${EXPERIMENT_NUM}"
 TASKID="${PROJECT_NAME}Task${EXPERIMENT_NUM}"
-WAIT_SECONDS=5
+WAIT_SECONDS=30
 
 
+# --vm-size "Standard_F4" \   <-- for cheapest 4 cpu machine, but spearmint runs out of ram
+# Standard_E4s_v3" \    <-- for cheapest memory-optimized 4cpu machine
 # docs: https://docs.microsoft.com/en-us/cli/azure/batch/pool?view=azure-cli-latest#az_batch_pool_create
 az batch pool create \
    --id ${POOLID} \
-   --vm-size "Standard_F4" \
+   --vm-size "Standard_D12_v2" \
    --image '/subscriptions/8557c4b8-f939-4cca-80f5-d17b546717af/resourceGroups/Jesse/providers/Microsoft.Compute/images/vm_for_batch_node' \
    --node-agent-sku-id "batch.node.ubuntu 16.04" \
    --target-low-priority-nodes ${NUMRESTARTS}
@@ -55,25 +63,6 @@ for i in `seq 1 ${NUMRESTARTS}`; do
 done
 
 
-#while true; do
-#    POOL_STATUS=`az batch pool show --pool-id ${POOLID} | grep allocationState\" | awk '{print $2}' | sed s/,// | sed s/\"// | sed s/\"//`
-#    echo "current status of allocationState: ${POOL_STATUS}"
-#    if [ "${POOL_STATUS}" == "steady" ]; then
-#	echo "the pool is now steady (not resizing), about to set autoscale"
-#	break
-#    else
-#	echo "waiting ${WAIT_SECONDS} seconds for pool to finish resizing"
-#	sleep ${WAIT_SECONDS}
-#    fi
-#done
-
-# evaluation interval has to be parsable by https://github.com/gweis/isodate/blob/master/src/isodate/isoduration.py, with minimum time as 5 min.
-#az batch pool autoscale enable \
-#   --pool-id ${POOLID} \
-#   --auto-scale-evaluation-interval 'P00Y00M00DT00H05M00S' \
-#   --auto-scale-formula '$averageActiveTaskCount = avg($ActiveTasks.GetSample(TimeInterval_Minute * 1));$TargetLowPriorityNodes = min(${NUMRESTARTS}, $averageActiveTaskCount);'
-
-
 start=`date +%s`
 while true; do
     NUM_COMPLETE_JOBS=`az batch job task-counts show --job-id ${JOBID} | grep completed | awk '{print $2}' | sed s/,//`
@@ -94,3 +83,25 @@ while true; do
 	sleep ${WAIT_SECONDS}
     fi
 done
+
+
+
+
+
+#while true; do
+#    POOL_STATUS=`az batch pool show --pool-id ${POOLID} | grep allocationState\" | awk '{print $2}' | sed s/,// | sed s/\"// | sed s/\"//`
+#    echo "current status of allocationState: ${POOL_STATUS}"
+#    if [ "${POOL_STATUS}" == "steady" ]; then
+#	echo "the pool is now steady (not resizing), about to set autoscale"
+#	break
+#    else
+#	echo "waiting ${WAIT_SECONDS} seconds for pool to finish resizing"
+#	sleep ${WAIT_SECONDS}
+#    fi
+#done
+
+# evaluation interval has to be parsable by https://github.com/gweis/isodate/blob/master/src/isodate/isoduration.py, with minimum time as 5 min.
+#az batch pool autoscale enable \
+#   --pool-id ${POOLID} \
+#   --auto-scale-evaluation-interval 'P00Y00M00DT00H05M00S' \
+#   --auto-scale-formula '$averageActiveTaskCount = avg($ActiveTasks.GetSample(TimeInterval_Minute * 1));$TargetLowPriorityNodes = min(${NUMRESTARTS}, $averageActiveTaskCount);'
